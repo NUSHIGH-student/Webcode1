@@ -2,28 +2,20 @@
 import * as THREE from "three";
 
 // ==========================================
-// 1. CREATE THE SCENE
+// 1. SCENE, CAMERA AND RENDERER
 // ==========================================
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x030510);
 
-// ==========================================
-// 2. CREATE THE CAMERA
-// ==========================================
-
 const camera = new THREE.PerspectiveCamera(
     60,
     window.innerWidth / window.innerHeight,
     0.1,
-    1000
+    200
 );
 
 camera.position.z = 12;
-
-// ==========================================
-// 3. CREATE THE RENDERER
-// ==========================================
 
 const renderer = new THREE.WebGLRenderer({
     antialias: true
@@ -34,21 +26,24 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
 document.body.appendChild(renderer.domElement);
 
+const clock = new THREE.Clock();
+
+
 // ==========================================
-// 4. CREATE STARS
+// 2. ORIGINAL BACKGROUND STARFIELD
 // ==========================================
 
 const starGeometry = new THREE.BufferGeometry();
+const starCount = 700;
+
 const starPositions = [];
 
-for (let i = 0; i < 700; i++) {
-
+for (let i = 0; i < starCount; i++) {
     starPositions.push(
         (Math.random() - 0.5) * 100,
         (Math.random() - 0.5) * 100,
-        (Math.random() - 0.5) * 60
+        (Math.random() - 0.5) * 100
     );
-
 }
 
 starGeometry.setAttribute(
@@ -57,16 +52,209 @@ starGeometry.setAttribute(
 );
 
 const starMaterial = new THREE.PointsMaterial({
-    color: 0x8abfff,
-    size: 0.08
+    color: 0x8bbcff,
+    size: 0.08,
+    transparent: true,
+    opacity: 0.8
 });
 
 const stars = new THREE.Points(starGeometry, starMaterial);
-
 scene.add(stars);
 
+
 // ==========================================
-// 5. CREATE FLOATING BUTTONS
+// 3. DYNAMIC STARS THAT SPAWN AND DIE
+// ==========================================
+
+const dynamicStars = [];
+
+function spawnStar(star, initial = false) {
+
+    star.position.set(
+        (Math.random() - 0.5) * 35,
+        (Math.random() - 0.5) * 22,
+        -Math.random() * 70 - 10
+    );
+
+    star.userData.lifetime = 4 + Math.random() * 8;
+
+    star.userData.age = initial
+        ? Math.random() * star.userData.lifetime
+        : 0;
+
+    star.userData.speed = 1 + Math.random() * 3;
+}
+
+for (let i = 0; i < 150; i++) {
+
+    const material = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false
+    });
+
+    const star = new THREE.Mesh(
+        new THREE.SphereGeometry(
+            0.025 + Math.random() * 0.035,
+            6,
+            6
+        ),
+        material
+    );
+
+    scene.add(star);
+
+    star.userData = {
+        age: 0,
+        lifetime: 5,
+        speed: 2
+    };
+
+    spawnStar(star, true);
+
+    dynamicStars.push(star);
+}
+
+
+// ==========================================
+// 4. GALAXY TEXTURE
+// ==========================================
+
+function createGalaxyTexture() {
+
+    const canvas = document.createElement("canvas");
+
+    canvas.width = 512;
+    canvas.height = 512;
+
+    const ctx = canvas.getContext("2d");
+
+    // Glowing centre
+
+    const gradient = ctx.createRadialGradient(
+        256, 256, 5,
+        256, 256, 220
+    );
+
+    gradient.addColorStop(
+        0,
+        "rgba(255,255,255,0.95)"
+    );
+
+    gradient.addColorStop(
+        0.12,
+        "rgba(150,180,255,0.65)"
+    );
+
+    gradient.addColorStop(
+        0.35,
+        "rgba(100,80,255,0.25)"
+    );
+
+    gradient.addColorStop(
+        1,
+        "rgba(20,10,80,0)"
+    );
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Spiral arms
+
+    ctx.translate(256, 256);
+
+    for (let arm = 0; arm < 3; arm++) {
+
+        ctx.save();
+
+        ctx.rotate((Math.PI * 2 / 3) * arm);
+
+        ctx.beginPath();
+
+        ctx.moveTo(0, 0);
+
+        ctx.bezierCurveTo(
+            40, -20,
+            100, -150,
+            220, -100
+        );
+
+        ctx.strokeStyle = "rgba(150,180,255,0.35)";
+        ctx.lineWidth = 18;
+        ctx.shadowBlur = 25;
+        ctx.shadowColor = "#7777ff";
+
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
+    return new THREE.CanvasTexture(canvas);
+}
+
+
+// ==========================================
+// 5. GALAXIES THAT SPAWN AND DIE
+// ==========================================
+
+const galaxyTexture = createGalaxyTexture();
+
+const galaxies = [];
+
+function spawnGalaxy(galaxy, initial = false) {
+
+    galaxy.position.set(
+        (Math.random() - 0.5) * 35,
+        (Math.random() - 0.5) * 20,
+        -Math.random() * 60 - 25
+    );
+
+    galaxy.userData.lifetime = 20 + Math.random() * 25;
+
+    galaxy.userData.age = initial
+        ? Math.random() * galaxy.userData.lifetime
+        : 0;
+
+    galaxy.userData.speed = 0.1 + Math.random() * 0.2;
+
+    galaxy.material.opacity = 0;
+}
+
+for (let i = 0; i < 5; i++) {
+
+    const material = new THREE.SpriteMaterial({
+        map: galaxyTexture,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+    });
+
+    const galaxy = new THREE.Sprite(material);
+
+    galaxy.scale.set(
+        5 + Math.random() * 4,
+        3 + Math.random() * 3,
+        1
+    );
+
+    scene.add(galaxy);
+
+    galaxy.userData = {
+        age: 0,
+        lifetime: 30,
+        speed: 0.15
+    };
+
+    spawnGalaxy(galaxy, true);
+
+    galaxies.push(galaxy);
+}
+
+
+// ==========================================
+// 6. FLOATING INTERACTIVE BUTTONS
 // ==========================================
 
 const buttons = [];
@@ -81,22 +269,35 @@ function createButton(label, x, y, z) {
     const ctx = canvas.getContext("2d");
 
     // Button background
-    ctx.shadowColor = "#00ccff";
-    ctx.shadowBlur = 25;
 
-    ctx.fillStyle = "rgba(5, 25, 55, 0.9)";
-    ctx.strokeStyle = "#37cfff";
-    ctx.lineWidth = 5;
+    ctx.fillStyle = "rgba(10, 25, 55, 0.85)";
 
     ctx.beginPath();
-    ctx.roundRect(12, 12, 488, 156, 25);
+
+    ctx.roundRect(10, 10, 492, 160, 30);
+
     ctx.fill();
+
+    // Button border
+
+    ctx.strokeStyle = "#8be9ff";
+    ctx.lineWidth = 5;
+
     ctx.stroke();
 
+    // Button glow
+
+    ctx.shadowBlur = 25;
+    ctx.shadowColor = "#00aaff";
+
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
+
     // Button text
-    ctx.shadowBlur = 12;
+
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 42px Arial";
+    ctx.font = "bold 55px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
@@ -116,16 +317,14 @@ function createButton(label, x, y, z) {
 
     button.position.set(x, y, z);
 
-    // Button physics properties
     button.userData = {
-
         label: label,
 
         baseX: x,
         baseY: y,
         baseZ: z,
 
-        speed: Math.random() * 0.5 + 0.5,
+        speed: 0.5 + Math.random() * 0.5,
         phase: Math.random() * Math.PI * 2,
 
         vx: 0,
@@ -133,76 +332,60 @@ function createButton(label, x, y, z) {
 
         offsetX: 0,
         offsetY: 0
-
     };
 
     scene.add(button);
-    buttons.push(button);
 
+    buttons.push(button);
 }
 
-// Add buttons
 createButton("HOME", -4, 2, 0);
 createButton("PROJECTS", 4, 2, -2);
 createButton("ABOUT", -4, -2, -1);
 createButton("CONTACT", 4, -2, 1);
 
+
 // ==========================================
-// 6. MOUSE INTERACTION
+// 7. MOUSE INTERACTION
 // ==========================================
 
-const mouse = new THREE.Vector2(0, 0);
+const mouse = new THREE.Vector2();
 
 window.addEventListener("pointermove", (event) => {
 
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
 });
 
+
 // ==========================================
-// 7. BUTTON CLICK DETECTION
+// 8. BUTTON CLICK DETECTION
 // ==========================================
 
 const raycaster = new THREE.Raycaster();
-const pointer = new THREE.Vector2();
 
-renderer.domElement.addEventListener("click", (event) => {
+window.addEventListener("click", () => {
 
-    const rect = renderer.domElement.getBoundingClientRect();
+    raycaster.setFromCamera(mouse, camera);
 
-    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const intersections = raycaster.intersectObjects(buttons);
 
-    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    if (intersections.length > 0) {
 
-    raycaster.setFromCamera(pointer, camera);
-
-    const hits = raycaster.intersectObjects(buttons);
-
-    if (hits.length > 0) {
-
-        const name = hits[0].object.userData.label;
+        const selectedButton = intersections[0].object;
 
         document.getElementById("message").textContent =
-            "You selected: " + name;
+            "You selected: " + selectedButton.userData.label;
 
     }
 
 });
 
-// ==========================================
-// 8. PHYSICS SETTINGS
-// ==========================================
-
-const stiffness = 8;
-const damping = 3;
-const mouseForce = 5;
-const interactionRadius = 4;
-
-const clock = new THREE.Clock();
 
 // ==========================================
-// 9. ANIMATION
+// 9. ANIMATION LOOP
 // ==========================================
 
 function animate() {
@@ -210,27 +393,108 @@ function animate() {
     requestAnimationFrame(animate);
 
     const dt = Math.min(clock.getDelta(), 0.03);
+
     const time = clock.elapsedTime;
 
-    buttons.forEach((button) => {
+
+    // --------------------------------------
+    // DYNAMIC STAR ANIMATION
+    // --------------------------------------
+
+    dynamicStars.forEach(star => {
+
+        star.userData.age += dt;
+
+        const progress =
+            star.userData.age / star.userData.lifetime;
+
+        // Fade in and fade out
+
+        star.material.opacity = Math.sin(progress * Math.PI);
+
+        // Move towards camera
+
+        star.position.z += star.userData.speed * dt;
+
+        // Respawn when lifetime ends
+
+        if (star.userData.age >= star.userData.lifetime) {
+
+            spawnStar(star);
+
+        }
+
+    });
+
+
+    // --------------------------------------
+    // GALAXY ANIMATION
+    // --------------------------------------
+
+    galaxies.forEach(galaxy => {
+
+        galaxy.userData.age += dt;
+
+        const progress =
+            galaxy.userData.age / galaxy.userData.lifetime;
+
+        // Fade in and fade out
+
+        galaxy.material.opacity =
+            0.3 * Math.sin(progress * Math.PI);
+
+        // Drift through space
+
+        galaxy.position.z += galaxy.userData.speed * dt;
+
+        galaxy.position.x +=
+            Math.sin(time * 0.15) * 0.002;
+
+        // Rotate
+
+        galaxy.material.rotation += dt * 0.025;
+
+        // Respawn
+
+        if (galaxy.userData.age >= galaxy.userData.lifetime) {
+
+            spawnGalaxy(galaxy);
+
+        }
+
+    });
+
+
+    // --------------------------------------
+    // SPRING PHYSICS FOR BUTTONS
+    // --------------------------------------
+
+    const stiffness = 8;
+    const damping = 3;
+    const mouseForce = 5;
+    const interactionRadius = 4;
+
+    buttons.forEach(button => {
 
         const data = button.userData;
 
-        // Mouse position
         const mouseX = mouse.x * 6;
         const mouseY = mouse.y * 4;
 
-        // Distance between mouse and button
         const dx = button.position.x - mouseX;
         const dy = button.position.y - mouseY;
 
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        // Mouse repulsion
         let forceX = 0;
         let forceY = 0;
 
-        if (distance < interactionRadius && distance > 0.001) {
+        // Mouse repulsion
+
+        if (
+            distance < interactionRadius &&
+            distance > 0.001
+        ) {
 
             const strength =
                 (interactionRadius - distance) * mouseForce;
@@ -241,72 +505,91 @@ function animate() {
         }
 
         // Spring force
+
         const springX = -stiffness * data.offsetX;
         const springY = -stiffness * data.offsetY;
 
         // Damping force
+
         const dampingX = -damping * data.vx;
         const dampingY = -damping * data.vy;
 
-        // Acceleration
+        // Total acceleration
+
         const ax = springX + dampingX + forceX;
         const ay = springY + dampingY + forceY;
 
-        // Velocity
+        // Update velocity
+
         data.vx += ax * dt;
         data.vy += ay * dt;
 
-        // Displacement
+        // Update displacement
+
         data.offsetX += data.vx * dt;
         data.offsetY += data.vy * dt;
 
         // Natural floating movement
+
         const floatY =
             Math.sin(time * data.speed + data.phase) * 0.25;
 
         const floatX =
             Math.cos(time * data.speed * 0.5 + data.phase) * 0.15;
 
-        // Update position
         button.position.x =
             data.baseX + floatX + data.offsetX;
 
         button.position.y =
             data.baseY + floatY + data.offsetY;
 
-        // Button rotation
+        // Rotation from movement
+
         button.rotation.z = -data.vx * 0.08;
         button.rotation.y = -data.offsetX * 0.12;
         button.rotation.x = data.offsetY * 0.1;
 
     });
 
-    // Camera follows mouse
+
+    // --------------------------------------
+    // CAMERA PARALLAX
+    // --------------------------------------
+
     camera.position.x +=
-        (mouse.x * 2 - camera.position.x) * 0.05;
+        (mouse.x * 0.5 - camera.position.x) * 0.03;
 
     camera.position.y +=
-        (mouse.y * 1.5 - camera.position.y) * 0.05;
+        (mouse.y * 0.5 - camera.position.y) * 0.03;
 
-    camera.lookAt(0, 0, 0);
 
-    // Rotate starfield
-    stars.rotation.y = time * 0.015;
+    // --------------------------------------
+    // ORIGINAL STARFIELD ROTATION
+    // --------------------------------------
 
-    // Render
+    stars.rotation.y += 0.0002;
+    stars.rotation.x += 0.0001;
+
+
+    // --------------------------------------
+    // RENDER
+    // --------------------------------------
+
     renderer.render(scene, camera);
 
 }
 
 animate();
 
+
 // ==========================================
-// 10. WINDOW RESIZING
+// 10. WINDOW RESIZE
 // ==========================================
 
 window.addEventListener("resize", () => {
 
-    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.aspect =
+        window.innerWidth / window.innerHeight;
 
     camera.updateProjectionMatrix();
 
