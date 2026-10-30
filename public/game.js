@@ -307,41 +307,60 @@ export function startSpaceGame(container) {
     window.addEventListener("keyup", keyUp);
 
     // CAMERA ROTATION
-    let yaw = 0;
-    let cameraDistance = 8;
-    let dragging = false;
-    let previousMouseX = 0;
 
-    function mouseDown(event) {
-        dragging = true;
-        previousMouseX = event.clientX;
-    }
 
-    function mouseUp() {
-        dragging = false;
-    }
+let yaw = 0;
+let pitch = 0.25;
 
-    function mouseMove(event) {
-        if (!dragging) return;
+let cameraDistance = 8;
+let dragging = false;
 
-        const difference = event.clientX - previousMouseX;
-        yaw -= difference * 0.005;
-        previousMouseX = event.clientX;
-    }
+let previousMouseX = 0;
+let previousMouseY = 0;
 
-    function wheel(event) {
-        cameraDistance += event.deltaY * 0.005;
-        cameraDistance = THREE.MathUtils.clamp(
-            cameraDistance,
-            4,
-            14
-        );
-    }
+function mouseDown(event) {
+    dragging = true;
 
-    renderer.domElement.addEventListener("pointerdown", mouseDown);
-    window.addEventListener("pointerup", mouseUp);
-    window.addEventListener("pointermove", mouseMove);
-    renderer.domElement.addEventListener("wheel", wheel);
+    previousMouseX = event.clientX;
+    previousMouseY = event.clientY;
+}
+
+function mouseUp() {
+    dragging = false;
+}
+
+function mouseMove(event) {
+
+    if (!dragging) return;
+
+    const differenceX = event.clientX - previousMouseX;
+    const differenceY = event.clientY - previousMouseY;
+
+    yaw -= differenceX * 0.005;
+    pitch -= differenceY * 0.005;
+
+    // Prevent the camera from flipping upside down.
+    pitch = THREE.MathUtils.clamp(pitch, -0.7, 1.0);
+
+    previousMouseX = event.clientX;
+    previousMouseY = event.clientY;
+}
+
+function wheel(event) {
+
+    cameraDistance += event.deltaY * 0.005;
+
+    cameraDistance = THREE.MathUtils.clamp(
+        cameraDistance,
+        4,
+        14
+    );
+}
+
+renderer.domElement.addEventListener("pointerdown", mouseDown);
+window.addEventListener("pointerup", mouseUp);
+window.addEventListener("pointermove", mouseMove);
+renderer.domElement.addEventListener("wheel", wheel);
 
     // PLAYER PHYSICS
     const velocity = new THREE.Vector3();
@@ -376,11 +395,11 @@ export function startSpaceGame(container) {
 
         const speed = keys.ShiftLeft ? 13 : 8;
 
-        const forwardX = Math.sin(yaw);
+        const forwardX = -Math.sin(yaw);
         const forwardZ = -Math.cos(yaw);
 
         const rightX = Math.cos(yaw);
-        const rightZ = Math.sin(yaw);
+        const rightZ = -Math.sin(yaw);
 
         velocity.x = (forwardX * forward + rightX * sideways) * speed;
         velocity.z = (forwardZ * forward + rightZ * sideways) * speed;
@@ -493,26 +512,29 @@ export function startSpaceGame(container) {
         }
 
         // CAMERA FOLLOW
-        const cameraX =
-            player.position.x + Math.sin(yaw) * cameraDistance;
+        // THIRD-PERSON CAMERA
 
-        const cameraZ =
-            player.position.z + Math.cos(yaw) * cameraDistance;
+const horizontalDistance = Math.cos(pitch) * cameraDistance;
 
-        camera.position.lerp(
-            new THREE.Vector3(
-                cameraX,
-                player.position.y + 4,
-                cameraZ
-            ),
-            1 - Math.pow(0.001, dt)
-        );
+const cameraX =
+    player.position.x + Math.sin(yaw) * horizontalDistance;
 
-        camera.lookAt(
-            player.position.x,
-            player.position.y + 1.3,
-            player.position.z
-        );
+const cameraY =
+    player.position.y + 1.3 + Math.sin(pitch) * cameraDistance;
+
+const cameraZ =
+    player.position.z + Math.cos(yaw) * horizontalDistance;
+
+camera.position.lerp(
+    new THREE.Vector3(cameraX, cameraY, cameraZ),
+    1 - Math.pow(0.001, dt)
+);
+
+camera.lookAt(
+    player.position.x,
+    player.position.y + 1.3,
+    player.position.z
+);
 
         renderer.render(scene, camera);
     }
