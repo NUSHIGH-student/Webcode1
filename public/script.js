@@ -1,5 +1,5 @@
-
 import * as THREE from "three";
+import { startSpaceGame } from "./game.js";
 
 // ==========================================
 // 1. SCENE, CAMERA AND RENDERER
@@ -264,33 +264,21 @@ function createButton(label, x, y, z) {
 
     const ctx = canvas.getContext("2d");
 
-    // Button background
-
     ctx.fillStyle = "rgba(10, 25, 55, 0.85)";
 
     ctx.beginPath();
-
     ctx.roundRect(10, 10, 492, 160, 30);
-
     ctx.fill();
-
-    // Button border
 
     ctx.strokeStyle = "#8be9ff";
     ctx.lineWidth = 5;
-
     ctx.stroke();
-
-    // Button glow
 
     ctx.shadowBlur = 25;
     ctx.shadowColor = "#00aaff";
-
     ctx.stroke();
 
     ctx.shadowBlur = 0;
-
-    // Button text
 
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 55px Arial";
@@ -398,7 +386,26 @@ segmentScreen.style.padding = "30px";
 document.body.appendChild(segmentScreen);
 
 
-// Section content
+// GAME CONTAINER
+
+const gameContainer = document.createElement("div");
+
+gameContainer.style.position = "absolute";
+gameContainer.style.inset = "0";
+gameContainer.style.width = "100%";
+gameContainer.style.height = "100%";
+gameContainer.style.display = "none";
+gameContainer.style.overflow = "hidden";
+gameContainer.style.zIndex = "0";
+
+segmentScreen.appendChild(gameContainer);
+
+let stopGame = null;
+
+
+// ==========================================
+// 9. SECTION CONTENT
+// ==========================================
 
 const sectionContent = {
 
@@ -467,7 +474,7 @@ segmentScreen.appendChild(backButton);
 
 
 // ==========================================
-// 9. FLASH TRANSITION FUNCTION
+// 10. FLASH TRANSITION FUNCTION
 // ==========================================
 
 let transitioning = false;
@@ -498,7 +505,7 @@ function flashTransition(callback) {
 
 
 // ==========================================
-// 10. OPEN A SECTION
+// 11. OPEN A SECTION
 // ==========================================
 
 function openSegment(label) {
@@ -510,10 +517,46 @@ function openSegment(label) {
     flashTransition(() => {
 
         sectionTitle.textContent = section.title;
-
         sectionDescription.textContent = section.description;
 
+        if (label === "NEW GAME") {
+
+            sectionTitle.style.display = "none";
+            sectionDescription.style.display = "none";
+
+            gameContainer.style.display = "block";
+
+            backButton.style.position = "absolute";
+            backButton.style.top = "20px";
+            backButton.style.right = "20px";
+            backButton.style.zIndex = "10";
+            backButton.style.marginTop = "0";
+
+        } else {
+
+            if (stopGame) {
+                stopGame();
+                stopGame = null;
+            }
+
+            gameContainer.style.display = "none";
+
+            sectionTitle.style.display = "";
+            sectionDescription.style.display = "";
+
+            backButton.style.position = "";
+            backButton.style.top = "";
+            backButton.style.right = "";
+            backButton.style.zIndex = "";
+            backButton.style.marginTop = "45px";
+
+        }
+
         segmentScreen.style.display = "flex";
+
+        if (label === "NEW GAME" && !stopGame) {
+            stopGame = startSpaceGame(gameContainer);
+        }
 
     });
 
@@ -521,7 +564,7 @@ function openSegment(label) {
 
 
 // ==========================================
-// 11. RETURN TO SPACE
+// 12. RETURN TO SPACE
 // ==========================================
 
 backButton.addEventListener("click", (event) => {
@@ -529,6 +572,22 @@ backButton.addEventListener("click", (event) => {
     event.stopPropagation();
 
     flashTransition(() => {
+
+        if (stopGame) {
+            stopGame();
+            stopGame = null;
+        }
+
+        gameContainer.style.display = "none";
+
+        sectionTitle.style.display = "";
+        sectionDescription.style.display = "";
+
+        backButton.style.position = "";
+        backButton.style.top = "";
+        backButton.style.right = "";
+        backButton.style.zIndex = "";
+        backButton.style.marginTop = "45px";
 
         segmentScreen.style.display = "none";
 
@@ -538,7 +597,7 @@ backButton.addEventListener("click", (event) => {
 
 
 // ==========================================
-// 12. BUTTON CLICK DETECTION
+// 13. BUTTON CLICK DETECTION
 // ==========================================
 
 const raycaster = new THREE.Raycaster();
@@ -565,7 +624,7 @@ window.addEventListener("click", () => {
 
 
 // ==========================================
-// 13. ANIMATION LOOP
+// 14. ANIMATION LOOP
 // ==========================================
 
 function animate() {
@@ -577,9 +636,7 @@ function animate() {
     const time = clock.elapsedTime;
 
 
-    // --------------------------------------
     // DYNAMIC STAR ANIMATION
-    // --------------------------------------
 
     dynamicStars.forEach(star => {
 
@@ -601,9 +658,7 @@ function animate() {
     });
 
 
-    // --------------------------------------
     // GALAXY ANIMATION
-    // --------------------------------------
 
     galaxies.forEach(galaxy => {
 
@@ -631,9 +686,7 @@ function animate() {
     });
 
 
-    // --------------------------------------
     // SPRING PHYSICS FOR BUTTONS
-    // --------------------------------------
 
     const stiffness = 8;
     const damping = 3;
@@ -702,9 +755,7 @@ function animate() {
     });
 
 
-    // --------------------------------------
     // CAMERA PARALLAX
-    // --------------------------------------
 
     camera.position.x +=
         (mouse.x * 0.5 - camera.position.x) * 0.03;
@@ -713,17 +764,13 @@ function animate() {
         (mouse.y * 0.5 - camera.position.y) * 0.03;
 
 
-    // --------------------------------------
     // ORIGINAL STARFIELD ROTATION
-    // --------------------------------------
 
     stars.rotation.y += 0.0002;
     stars.rotation.x += 0.0001;
 
 
-    // --------------------------------------
     // RENDER
-    // --------------------------------------
 
     renderer.render(scene, camera);
 
@@ -733,7 +780,7 @@ animate();
 
 
 // ==========================================
-// 14. WINDOW RESIZE
+// 15. WINDOW RESIZE
 // ==========================================
 
 window.addEventListener("resize", () => {
