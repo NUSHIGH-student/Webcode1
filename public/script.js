@@ -1,10 +1,17 @@
+
 import * as THREE from "three";
 
-// 1. Create the scene
+// ==========================================
+// 1. CREATE THE SCENE
+// ==========================================
+
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x030510);
 
-// 2. Create the camera
+// ==========================================
+// 2. CREATE THE CAMERA
+// ==========================================
+
 const camera = new THREE.PerspectiveCamera(
     60,
     window.innerWidth / window.innerHeight,
@@ -14,7 +21,10 @@ const camera = new THREE.PerspectiveCamera(
 
 camera.position.z = 12;
 
-// 3. Create the renderer
+// ==========================================
+// 3. CREATE THE RENDERER
+// ==========================================
+
 const renderer = new THREE.WebGLRenderer({
     antialias: true
 });
@@ -24,16 +34,21 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
 document.body.appendChild(renderer.domElement);
 
-// 4. Create stars
+// ==========================================
+// 4. CREATE STARS
+// ==========================================
+
 const starGeometry = new THREE.BufferGeometry();
 const starPositions = [];
 
 for (let i = 0; i < 700; i++) {
+
     starPositions.push(
         (Math.random() - 0.5) * 100,
         (Math.random() - 0.5) * 100,
         (Math.random() - 0.5) * 60
     );
+
 }
 
 starGeometry.setAttribute(
@@ -47,14 +62,19 @@ const starMaterial = new THREE.PointsMaterial({
 });
 
 const stars = new THREE.Points(starGeometry, starMaterial);
+
 scene.add(stars);
 
-// 5. Create floating buttons
+// ==========================================
+// 5. CREATE FLOATING BUTTONS
+// ==========================================
+
 const buttons = [];
 
 function createButton(label, x, y, z) {
 
     const canvas = document.createElement("canvas");
+
     canvas.width = 512;
     canvas.height = 180;
 
@@ -96,34 +116,54 @@ function createButton(label, x, y, z) {
 
     button.position.set(x, y, z);
 
+    // Button physics properties
     button.userData = {
+
         label: label,
+
         baseX: x,
         baseY: y,
         baseZ: z,
+
         speed: Math.random() * 0.5 + 0.5,
-        phase: Math.random() * Math.PI * 2
+        phase: Math.random() * Math.PI * 2,
+
+        vx: 0,
+        vy: 0,
+
+        offsetX: 0,
+        offsetY: 0
+
     };
 
     scene.add(button);
     buttons.push(button);
+
 }
 
-// Add buttons to the universe
+// Add buttons
 createButton("HOME", -4, 2, 0);
 createButton("PROJECTS", 4, 2, -2);
 createButton("ABOUT", -4, -2, -1);
 createButton("CONTACT", 4, -2, 1);
 
-// 6. Mouse interaction
+// ==========================================
+// 6. MOUSE INTERACTION
+// ==========================================
+
 const mouse = new THREE.Vector2(0, 0);
 
 window.addEventListener("pointermove", (event) => {
+
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
 });
 
-// 7. Detect button clicks
+// ==========================================
+// 7. BUTTON CLICK DETECTION
+// ==========================================
+
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 
@@ -132,6 +172,7 @@ renderer.domElement.addEventListener("click", (event) => {
     const rect = renderer.domElement.getBoundingClientRect();
 
     pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+
     pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
     raycaster.setFromCamera(pointer, camera);
@@ -139,63 +180,143 @@ renderer.domElement.addEventListener("click", (event) => {
     const hits = raycaster.intersectObjects(buttons);
 
     if (hits.length > 0) {
+
         const name = hits[0].object.userData.label;
 
         document.getElementById("message").textContent =
             "You selected: " + name;
+
     }
+
 });
 
-// 8. Animate everything
+// ==========================================
+// 8. PHYSICS SETTINGS
+// ==========================================
+
+const stiffness = 8;
+const damping = 3;
+const mouseForce = 5;
+const interactionRadius = 4;
+
 const clock = new THREE.Clock();
+
+// ==========================================
+// 9. ANIMATION
+// ==========================================
 
 function animate() {
 
     requestAnimationFrame(animate);
 
-    const time = clock.getElapsedTime();
+    const dt = Math.min(clock.getDelta(), 0.03);
+    const time = clock.elapsedTime;
 
     buttons.forEach((button) => {
 
         const data = button.userData;
 
-        // Floating movement
-        button.position.y =
-            data.baseY + Math.sin(time * data.speed + data.phase) * 0.25;
+        // Mouse position
+        const mouseX = mouse.x * 6;
+        const mouseY = mouse.y * 4;
 
+        // Distance between mouse and button
+        const dx = button.position.x - mouseX;
+        const dy = button.position.y - mouseY;
+
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        // Mouse repulsion
+        let forceX = 0;
+        let forceY = 0;
+
+        if (distance < interactionRadius && distance > 0.001) {
+
+            const strength =
+                (interactionRadius - distance) * mouseForce;
+
+            forceX = (dx / distance) * strength;
+            forceY = (dy / distance) * strength;
+
+        }
+
+        // Spring force
+        const springX = -stiffness * data.offsetX;
+        const springY = -stiffness * data.offsetY;
+
+        // Damping force
+        const dampingX = -damping * data.vx;
+        const dampingY = -damping * data.vy;
+
+        // Acceleration
+        const ax = springX + dampingX + forceX;
+        const ay = springY + dampingY + forceY;
+
+        // Velocity
+        data.vx += ax * dt;
+        data.vy += ay * dt;
+
+        // Displacement
+        data.offsetX += data.vx * dt;
+        data.offsetY += data.vy * dt;
+
+        // Natural floating movement
+        const floatY =
+            Math.sin(time * data.speed + data.phase) * 0.25;
+
+        const floatX =
+            Math.cos(time * data.speed * 0.5 + data.phase) * 0.15;
+
+        // Update position
         button.position.x =
-            data.baseX + Math.cos(time * data.speed * 0.5 + data.phase) * 0.15;
+            data.baseX + floatX + data.offsetX;
 
-        // Rotation
-        button.rotation.z =
-            Math.sin(time * 0.5 + data.phase) * 0.06;
+        button.position.y =
+            data.baseY + floatY + data.offsetY;
 
-        // React to mouse
-        button.position.x += mouse.x * 1.5;
-        button.position.y += mouse.y * 1.5;
+        // Button rotation
+        button.rotation.z = -data.vx * 0.08;
+        button.rotation.y = -data.offsetX * 0.12;
+        button.rotation.x = data.offsetY * 0.1;
+
     });
 
-    // Camera follows mouse slightly
-    camera.position.x += (mouse.x * 0.6 - camera.position.x) * 0.05;
-    camera.position.y += (mouse.y * 0.4 - camera.position.y) * 0.05;
+    // Camera follows mouse
+    camera.position.x +=
+        (mouse.x * 2 - camera.position.x) * 0.05;
+
+    camera.position.y +=
+        (mouse.y * 1.5 - camera.position.y) * 0.05;
 
     camera.lookAt(0, 0, 0);
 
-    // Slowly rotate the starfield
+    // Rotate starfield
     stars.rotation.y = time * 0.015;
 
+    // Render
     renderer.render(scene, camera);
-    button.rotation.y = -mouse.x * 0.3;
-    button.rotation.x = mouse.y * 0.2;
+
 }
 
 animate();
 
-// 9. Handle window resizing
+// ==========================================
+// 10. WINDOW RESIZING
+// ==========================================
+
 window.addEventListener("resize", () => {
 
     camera.aspect = window.innerWidth / window.innerHeight;
+
     camera.updateProjectionMatrix();
 
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(
+        window.innerWidth,
+        window.innerHeight
+    );
+
+    renderer.setPixelRatio(
+        Math.min(window.devicePixelRatio, 2)
+    );
+
 });
