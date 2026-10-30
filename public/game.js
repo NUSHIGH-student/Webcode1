@@ -2,8 +2,8 @@
 import * as THREE from "three";
 
 export function startSpaceGame(container) {
-    container.innerHTML = "";
 
+    container.innerHTML = "";
     container.style.position = "relative";
     container.style.width = "100%";
     container.style.height = "100%";
@@ -90,6 +90,7 @@ export function startSpaceGame(container) {
     const solidBoxes = [];
 
     function addBox(x, y, z, sx, sy, sz, material) {
+
         const mesh = new THREE.Mesh(
             new THREE.BoxGeometry(sx, sy, sz),
             material
@@ -98,12 +99,14 @@ export function startSpaceGame(container) {
         mesh.position.set(x, y, z);
         mesh.castShadow = true;
         mesh.receiveShadow = true;
+
         scene.add(mesh);
 
         return mesh;
     }
 
     function addSolidBox(x, y, z, sx, sy, sz, material) {
+
         const mesh = addBox(x, y, z, sx, sy, sz, material);
 
         solidBoxes.push({
@@ -128,10 +131,10 @@ export function startSpaceGame(container) {
     // 6. OUTER WALLS
     // ==========================================
 
-    addBox(0, 5, -25, 70, 10, 1, wallMat);
-    addBox(0, 5, 25, 70, 10, 1, wallMat);
-    addBox(-35, 5, 0, 1, 10, 50, wallMat);
-    addBox(35, 5, 0, 1, 10, 50, wallMat);
+    addSolidBox(0, 5, -25, 70, 10, 1, wallMat);
+    addSolidBox(0, 5, 25, 70, 10, 1, wallMat);
+    addSolidBox(-35, 5, 0, 1, 10, 50, wallMat);
+    addSolidBox(35, 5, 0, 1, 10, 50, wallMat);
 
     // ==========================================
     // 7. INTERIOR WALLS
@@ -227,6 +230,7 @@ export function startSpaceGame(container) {
     });
 
     function makeLimb(parent, x, y, z, length, radius, material) {
+
         const mesh = new THREE.Mesh(
             new THREE.CylinderGeometry(radius, radius, length, 10),
             material
@@ -239,8 +243,6 @@ export function startSpaceGame(container) {
         return mesh;
     }
 
-    // TORSO
-
     const torso = new THREE.Mesh(
         new THREE.BoxGeometry(0.85, 1.05, 0.45),
         suitMat
@@ -249,8 +251,6 @@ export function startSpaceGame(container) {
     torso.position.y = 1.35;
     torso.castShadow = true;
     player.add(torso);
-
-    // HEAD
 
     const head = new THREE.Mesh(
         new THREE.SphereGeometry(0.3, 16, 16),
@@ -261,8 +261,6 @@ export function startSpaceGame(container) {
     head.castShadow = true;
     player.add(head);
 
-    // ARMS
-
     const leftArm = makeLimb(
         player, -0.58, 1.35, 0, 0.85, 0.13, suitMat
     );
@@ -270,8 +268,6 @@ export function startSpaceGame(container) {
     const rightArm = makeLimb(
         player, 0.58, 1.35, 0, 0.85, 0.13, suitMat
     );
-
-    // LEGS
 
     const leftLeg = makeLimb(
         player, -0.23, 0.48, 0, 0.9, 0.16, darkMat
@@ -313,7 +309,6 @@ export function startSpaceGame(container) {
         );
 
         coin.position.set(x, y, z);
-
         coin.userData.baseY = y;
         coin.userData.phase = Math.random() * Math.PI * 2;
 
@@ -322,7 +317,17 @@ export function startSpaceGame(container) {
     }
 
     // ==========================================
-    // 12. HUD
+    // 12. MONEY AND PLAYER HEALTH
+    // ==========================================
+
+    let money = 0;
+    let collected = 0;
+
+    let playerHealth = 100;
+    let playerDamageCooldown = 0;
+
+    // ==========================================
+    // 13. HUD
     // ==========================================
 
     const hud = document.createElement("div");
@@ -345,17 +350,22 @@ export function startSpaceGame(container) {
         </div>
 
         <div id="money">Credits: 0</div>
-
-        <div id="quest">
-            Quest: Collect 5 energy credits
-        </div>
+        <div id="health">Health: 100 / 100</div>
+        <div id="weapon">Weapon: Starter Blaster</div>
+        <div id="quest">Quest: Collect 5 energy credits</div>
 
         <div style="margin-top:12px;color:#a9c8e8;font-size:13px;">
             W A S D — Move<br>
-            ARROW KEYS — Rotate camera<br>
             SPACE — Jump<br>
             SHIFT — Sprint<br>
-            MOUSE DRAG — Rotate camera<br>
+            MOUSE — Aim<br>
+            LEFT CLICK — Shoot<br>
+            1 / 2 / 3 / 4 — Switch weapon<br>
+            Z — Punch<br>
+            X — Energy burst<br>
+            C — Dash<br>
+            ARROWS — Rotate camera<br>
+            RIGHT MOUSE DRAG — Rotate camera<br>
             MOUSE WHEEL — Zoom
         </div>
     `;
@@ -363,17 +373,62 @@ export function startSpaceGame(container) {
     container.appendChild(hud);
 
     const moneyDisplay = hud.querySelector("#money");
+    const healthDisplay = hud.querySelector("#health");
+    const weaponDisplay = hud.querySelector("#weapon");
     const questDisplay = hud.querySelector("#quest");
 
-    let money = 0;
-    let collected = 0;
+    function updateMoney() {
+        moneyDisplay.textContent = `Credits: ${money}`;
+    }
+
+    function updateHealth() {
+        healthDisplay.textContent =
+            `Health: ${Math.max(0, playerHealth)} / 100`;
+    }
+
+    function addMoney(amount) {
+        money += amount;
+        updateMoney();
+    }
 
     // ==========================================
-    // 13. INPUT
+    // 14. NOTIFICATIONS
+    // ==========================================
+
+    const notification = document.createElement("div");
+
+    notification.style.cssText = `
+        position:absolute;
+        top:22px;
+        right:25px;
+        color:#ffffff;
+        font-family:Arial,sans-serif;
+        font-size:17px;
+        font-weight:bold;
+        text-shadow:0 2px 8px black;
+        pointer-events:none;
+        z-index:10;
+    `;
+
+    container.appendChild(notification);
+
+    let notificationTimer = 0;
+
+    function notify(message) {
+        notification.textContent = message;
+        notificationTimer = 2;
+    }
+
+    // ==========================================
+    // 15. INPUT
     // ==========================================
 
     const keys = {};
+
     let jumpQueued = false;
+    let punchQueued = false;
+    let burstQueued = false;
+    let dashQueued = false;
 
     function keyDown(event) {
 
@@ -382,6 +437,25 @@ export function startSpaceGame(container) {
         if (event.code === "Space") {
             jumpQueued = true;
         }
+
+        if (event.code === "KeyZ") {
+            punchQueued = true;
+        }
+
+        if (event.code === "KeyX") {
+            burstQueued = true;
+        }
+
+        if (event.code === "KeyC") {
+            dashQueued = true;
+        }
+
+        // Weapon switching
+
+        if (event.code === "Digit1") selectWeapon(0);
+        if (event.code === "Digit2") selectWeapon(1);
+        if (event.code === "Digit3") selectWeapon(2);
+        if (event.code === "Digit4") selectWeapon(3);
 
         if (
             event.code === "Space" ||
@@ -399,7 +473,7 @@ export function startSpaceGame(container) {
     window.addEventListener("keyup", keyUp);
 
     // ==========================================
-    // 14. CAMERA ROTATION
+    // 16. CAMERA ROTATION
     // ==========================================
 
     let yaw = 0;
@@ -411,12 +485,45 @@ export function startSpaceGame(container) {
     let previousMouseX = 0;
     let previousMouseY = 0;
 
+    const mouse = new THREE.Vector2(0, 0);
+
+    const raycaster = new THREE.Raycaster();
+
+    const aimPlane = new THREE.Plane(
+        new THREE.Vector3(0, 1, 0),
+        -1.3
+    );
+
+    const aimPoint = new THREE.Vector3();
+
+    function updateMousePosition(event) {
+
+        const rect = renderer.domElement.getBoundingClientRect();
+
+        mouse.x =
+            ((event.clientX - rect.left) / rect.width) * 2 - 1;
+
+        mouse.y =
+            -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    }
+
     function mouseDown(event) {
 
-        dragging = true;
+        updateMousePosition(event);
 
-        previousMouseX = event.clientX;
-        previousMouseY = event.clientY;
+        // Right mouse button rotates the camera.
+        if (event.button === 2) {
+
+            dragging = true;
+
+            previousMouseX = event.clientX;
+            previousMouseY = event.clientY;
+        }
+
+        // Left mouse button shoots.
+        if (event.button === 0) {
+            shootQueued = true;
+        }
     }
 
     function mouseUp() {
@@ -424,6 +531,8 @@ export function startSpaceGame(container) {
     }
 
     function mouseMove(event) {
+
+        updateMousePosition(event);
 
         if (!dragging) return;
 
@@ -453,10 +562,17 @@ export function startSpaceGame(container) {
     renderer.domElement.addEventListener("pointerdown", mouseDown);
     window.addEventListener("pointerup", mouseUp);
     window.addEventListener("pointermove", mouseMove);
+
+    renderer.domElement.addEventListener("contextmenu", event => {
+        event.preventDefault();
+    });
+
     renderer.domElement.addEventListener("wheel", wheel);
 
+    let shootQueued = false;
+
     // ==========================================
-    // 15. PLAYER PHYSICS
+    // 17. PLAYER PHYSICS
     // ==========================================
 
     const velocity = new THREE.Vector3();
@@ -468,8 +584,6 @@ export function startSpaceGame(container) {
     const playerHeight = 2.4;
 
     const clock = new THREE.Clock();
-
-    // Check whether the player overlaps a solid box.
 
     function collidesAt(x, z, feetY) {
 
@@ -491,7 +605,732 @@ export function startSpaceGame(container) {
     }
 
     // ==========================================
-    // 16. ANIMATION
+    // 18. MOUSE AIMING
+    // ==========================================
+
+    function getAimPoint() {
+
+        raycaster.setFromCamera(mouse, camera);
+
+        aimPlane.constant = -(player.position.y + 1.3);
+
+        const result = raycaster.ray.intersectPlane(
+            aimPlane,
+            aimPoint
+        );
+
+        if (!result) {
+
+            const direction = raycaster.ray.direction.clone();
+
+            return camera.position.clone().add(
+                direction.multiplyScalar(30)
+            );
+        }
+
+        return aimPoint.clone();
+    }
+
+    function getAimDirection() {
+
+        const origin = new THREE.Vector3(
+            player.position.x,
+            player.position.y + 1.3,
+            player.position.z
+        );
+
+        const target = getAimPoint();
+
+        const direction = target.sub(origin);
+
+        if (direction.lengthSq() < 0.001) {
+            direction.set(0, 0, -1);
+        }
+
+        return direction.normalize();
+    }
+
+    // ==========================================
+    // 19. WEAPON SYSTEM
+    // ==========================================
+
+    const weapons = [
+        {
+            name: "Starter Blaster",
+            damage: 25,
+            speed: 24,
+            cooldown: 0.35,
+            color: 0x36caff,
+            size: 0.16,
+            pellets: 1
+        },
+        {
+            name: "Rapid Blaster",
+            damage: 12,
+            speed: 30,
+            cooldown: 0.12,
+            color: 0xff4c4c,
+            size: 0.12,
+            pellets: 1
+        },
+        {
+            name: "Heavy Plasma",
+            damage: 45,
+            speed: 15,
+            cooldown: 0.8,
+            color: 0xb45cff,
+            size: 0.25,
+            pellets: 1
+        },
+        {
+            name: "Scatter Blaster",
+            damage: 9,
+            speed: 20,
+            cooldown: 0.65,
+            color: 0xffd34a,
+            size: 0.11,
+            pellets: 5
+        }
+    ];
+
+    let selectedWeapon = 0;
+    let weaponCooldown = 0;
+
+    function selectWeapon(index) {
+
+        if (index < 0 || index >= weapons.length) return;
+
+        selectedWeapon = index;
+
+        weaponDisplay.textContent =
+            `Weapon: ${weapons[index].name}`;
+
+        notify(`Equipped ${weapons[index].name}`);
+    }
+
+    const projectiles = [];
+
+    function createProjectile(origin, direction, weapon, damage) {
+
+        const material = new THREE.MeshStandardMaterial({
+            color: weapon.color,
+            emissive: weapon.color,
+            emissiveIntensity: 3,
+            metalness: 0.3,
+            roughness: 0.2
+        });
+
+        const mesh = new THREE.Mesh(
+            new THREE.SphereGeometry(weapon.size, 12, 12),
+            material
+        );
+
+        mesh.position.copy(origin);
+        scene.add(mesh);
+
+        projectiles.push({
+            mesh,
+            direction: direction.clone().normalize(),
+            speed: weapon.speed,
+            damage,
+            life: 2.5,
+            distance: 0,
+            maxDistance: 55,
+            color: weapon.color
+        });
+    }
+
+    function fireWeapon() {
+
+        if (weaponCooldown > 0) return;
+
+        const weapon = weapons[selectedWeapon];
+
+        const origin = new THREE.Vector3(
+            player.position.x,
+            player.position.y + 1.3,
+            player.position.z
+        );
+
+        const direction = getAimDirection();
+
+        for (let i = 0; i < weapon.pellets; i++) {
+
+            const shotDirection = direction.clone();
+
+            if (weapon.pellets > 1) {
+
+                shotDirection.x += (Math.random() - 0.5) * 0.2;
+                shotDirection.y += (Math.random() - 0.5) * 0.12;
+                shotDirection.z += (Math.random() - 0.5) * 0.2;
+
+                shotDirection.normalize();
+            }
+
+            createProjectile(
+                origin,
+                shotDirection,
+                weapon,
+                weapon.damage
+            );
+        }
+
+        weaponCooldown = weapon.cooldown;
+    }
+
+    // ==========================================
+    // 20. ENEMY NPCs
+    // ==========================================
+
+    const enemies = [];
+
+    const enemyBodyMat = new THREE.MeshStandardMaterial({
+        color: 0x9b263d,
+        metalness: 0.5,
+        roughness: 0.4
+    });
+
+    const enemyHeadMat = new THREE.MeshStandardMaterial({
+        color: 0xff5656,
+        emissive: 0x8b1010,
+        emissiveIntensity: 0.7
+    });
+
+    function createEnemy(x, z) {
+
+        const enemy = new THREE.Group();
+
+        const body = new THREE.Mesh(
+            new THREE.BoxGeometry(0.9, 1.1, 0.55),
+            enemyBodyMat
+        );
+
+        body.position.y = 1.25;
+        body.castShadow = true;
+        enemy.add(body);
+
+        const head = new THREE.Mesh(
+            new THREE.SphereGeometry(0.32, 12, 12),
+            enemyHeadMat
+        );
+
+        head.position.y = 2.05;
+        enemy.add(head);
+
+        const eye = new THREE.Mesh(
+            new THREE.BoxGeometry(0.3, 0.08, 0.08),
+            new THREE.MeshBasicMaterial({
+                color: 0xff0000
+            })
+        );
+
+        eye.position.set(0, 2.08, 0.28);
+        enemy.add(eye);
+
+        enemy.position.set(x, 0, z);
+        scene.add(enemy);
+
+        const healthBar = new THREE.Group();
+
+        const background = new THREE.Mesh(
+            new THREE.PlaneGeometry(1.1, 0.12),
+            new THREE.MeshBasicMaterial({
+                color: 0x330000,
+                side: THREE.DoubleSide
+            })
+        );
+
+        const fill = new THREE.Mesh(
+            new THREE.PlaneGeometry(1, 0.09),
+            new THREE.MeshBasicMaterial({
+                color: 0xff3333,
+                side: THREE.DoubleSide
+            })
+        );
+
+        fill.position.z = 0.01;
+
+        healthBar.add(background);
+        healthBar.add(fill);
+
+        scene.add(healthBar);
+
+        const data = {
+            group: enemy,
+            health: 100,
+            maxHealth: 100,
+            attackCooldown: 0,
+            healthBar,
+            healthFill: fill,
+            alive: true,
+            respawnTimer: 0,
+            spawnX: x,
+            spawnZ: z
+        };
+
+        enemies.push(data);
+
+        return data;
+    }
+
+    createEnemy(-25, 15);
+    createEnemy(20, 5);
+    createEnemy(25, -15);
+    createEnemy(-5, -15);
+
+    function damageEnemy(enemy, amount) {
+
+        if (!enemy.alive) return;
+
+        enemy.health -= amount;
+
+        if (enemy.health <= 0) {
+
+            enemy.health = 0;
+            enemy.alive = false;
+
+            scene.remove(enemy.group);
+            scene.remove(enemy.healthBar);
+
+            addMoney(150);
+
+            notify("Enemy defeated! +150 Credits");
+
+            enemy.respawnTimer = 8;
+        }
+    }
+
+    // ==========================================
+    // 21. PROJECTILE COLLISION
+    // ==========================================
+
+    function pointSegmentDistance(point, start, end) {
+
+        const segment = end.clone().sub(start);
+
+        const lengthSq = segment.lengthSq();
+
+        if (lengthSq === 0) {
+            return point.distanceTo(start);
+        }
+
+        const t = THREE.MathUtils.clamp(
+            point.clone().sub(start).dot(segment) / lengthSq,
+            0,
+            1
+        );
+
+        const closest = start.clone().add(
+            segment.multiplyScalar(t)
+        );
+
+        return point.distanceTo(closest);
+    }
+
+    function projectileHitsWall(start, end) {
+
+        const direction = end.clone().sub(start);
+
+        const length = direction.length();
+
+        if (length === 0) return false;
+
+        direction.normalize();
+
+        const ray = new THREE.Ray(start, direction);
+
+        for (const box of solidBoxes) {
+
+            const bounds = new THREE.Box3(
+                new THREE.Vector3(
+                    box.x - box.halfX,
+                    box.minY,
+                    box.z - box.halfZ
+                ),
+                new THREE.Vector3(
+                    box.x + box.halfX,
+                    box.maxY,
+                    box.z + box.halfZ
+                )
+            );
+
+            const hit = ray.intersectBox(bounds, new THREE.Vector3());
+
+            if (hit && start.distanceTo(hit) <= length) {
+                return true;
+            }
+        }
+
+        // Outer map boundaries
+
+        if (
+            end.x < -34 ||
+            end.x > 34 ||
+            end.z < -24 ||
+            end.z > 24
+        ) {
+            return true;
+        }
+
+        return false;
+    }
+
+    function updateProjectiles(dt) {
+
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+
+            const projectile = projectiles[i];
+
+            const start = projectile.mesh.position.clone();
+
+            const movement = projectile.direction.clone().multiplyScalar(
+                projectile.speed * dt
+            );
+
+            const end = start.clone().add(movement);
+
+            projectile.life -= dt;
+            projectile.distance += movement.length();
+
+            let remove = false;
+
+            // Wall collision
+
+            if (projectileHitsWall(start, end)) {
+                remove = true;
+            }
+
+            // Enemy collision
+
+            if (!remove) {
+
+                for (const enemy of enemies) {
+
+                    if (!enemy.alive) continue;
+
+                    const target = new THREE.Vector3(
+                        enemy.group.position.x,
+                        enemy.group.position.y + 1.3,
+                        enemy.group.position.z
+                    );
+
+                    const distance = pointSegmentDistance(
+                        target,
+                        start,
+                        end
+                    );
+
+                    if (distance < 0.75) {
+
+                        damageEnemy(enemy, projectile.damage);
+
+                        remove = true;
+                        break;
+                    }
+                }
+            }
+
+            if (
+                projectile.life <= 0 ||
+                projectile.distance >= projectile.maxDistance
+            ) {
+                remove = true;
+            }
+
+            if (remove) {
+
+                scene.remove(projectile.mesh);
+                projectile.mesh.geometry.dispose();
+                projectile.mesh.material.dispose();
+
+                projectiles.splice(i, 1);
+
+            } else {
+
+                projectile.mesh.position.copy(end);
+            }
+        }
+    }
+
+    // ==========================================
+    // 22. MELEE PUNCH — Z
+    // ==========================================
+
+    let punchCooldown = 0;
+    let punchAnimation = 0;
+
+    function punch() {
+
+        if (punchCooldown > 0) return;
+
+        const direction = getAimDirection();
+
+        const origin = new THREE.Vector3(
+            player.position.x,
+            player.position.y + 1.3,
+            player.position.z
+        );
+
+        let hitSomething = false;
+
+        for (const enemy of enemies) {
+
+            if (!enemy.alive) continue;
+
+            const target = new THREE.Vector3(
+                enemy.group.position.x,
+                enemy.group.position.y + 1.3,
+                enemy.group.position.z
+            );
+
+            const difference = target.clone().sub(origin);
+
+            const distance = difference.length();
+
+            if (distance > 2.2) continue;
+
+            difference.normalize();
+
+            if (direction.dot(difference) > 0.45) {
+
+                damageEnemy(enemy, 25);
+
+                hitSomething = true;
+            }
+        }
+
+        punchCooldown = 0.55;
+        punchAnimation = 0.25;
+
+        if (hitSomething) {
+            notify("Punch hit!");
+        }
+    }
+
+    // ==========================================
+    // 23. ENERGY BURST — X
+    // ==========================================
+
+    let burstCooldown = 0;
+
+    function energyBurst() {
+
+        if (burstCooldown > 0) return;
+
+        const origin = new THREE.Vector3(
+            player.position.x,
+            player.position.y + 1.3,
+            player.position.z
+        );
+
+        const direction = getAimDirection();
+
+        const specialWeapon = {
+            speed: 18,
+            size: 0.32,
+            color: 0xff7b27
+        };
+
+        createProjectile(
+            origin,
+            direction,
+            specialWeapon,
+            40
+        );
+
+        burstCooldown = 2;
+
+        notify("Energy burst!");
+    }
+
+    // ==========================================
+    // 24. DASH — C
+    // ==========================================
+
+    let dashCooldown = 0;
+
+    function dash() {
+
+        if (dashCooldown > 0) return;
+
+        const direction = getAimDirection();
+
+        // Dash horizontally towards the mouse aim.
+
+        direction.y = 0;
+
+        if (direction.lengthSq() < 0.001) return;
+
+        direction.normalize();
+
+        const distance = 4;
+        const steps = 12;
+
+        for (let i = 1; i <= steps; i++) {
+
+            const amount = distance / steps;
+
+            const nextX =
+                player.position.x + direction.x * amount;
+
+            const nextZ =
+                player.position.z + direction.z * amount;
+
+            const boundedX = THREE.MathUtils.clamp(nextX, -33, 33);
+            const boundedZ = THREE.MathUtils.clamp(nextZ, -23, 23);
+
+            if (
+                collidesAt(
+                    boundedX,
+                    boundedZ,
+                    player.position.y
+                )
+            ) {
+                break;
+            }
+
+            player.position.x = boundedX;
+            player.position.z = boundedZ;
+        }
+
+        dashCooldown = 3;
+
+        notify("Dash!");
+    }
+
+    // ==========================================
+    // 25. ENEMY AI
+    // ==========================================
+
+    function updateEnemies(dt) {
+
+        for (const enemy of enemies) {
+
+            if (!enemy.alive) {
+
+                enemy.respawnTimer -= dt;
+
+                if (enemy.respawnTimer <= 0) {
+
+                    enemy.health = enemy.maxHealth;
+                    enemy.alive = true;
+
+                    enemy.group.position.set(
+                        enemy.spawnX,
+                        0,
+                        enemy.spawnZ
+                    );
+
+                    scene.add(enemy.group);
+                    scene.add(enemy.healthBar);
+                }
+
+                continue;
+            }
+
+            const difference = new THREE.Vector3(
+                player.position.x - enemy.group.position.x,
+                0,
+                player.position.z - enemy.group.position.z
+            );
+
+            const distance = difference.length();
+
+            enemy.attackCooldown -= dt;
+
+            // Follow player
+
+            if (distance > 1.5 && distance < 25) {
+
+                difference.normalize();
+
+                const speed = 2.5;
+
+                const nextX =
+                    enemy.group.position.x + difference.x * speed * dt;
+
+                const nextZ =
+                    enemy.group.position.z + difference.z * speed * dt;
+
+                // Avoid walking through walls.
+
+                if (!collidesAt(nextX, enemy.group.position.z, 0)) {
+                    enemy.group.position.x = nextX;
+                }
+
+                if (!collidesAt(enemy.group.position.x, nextZ, 0)) {
+                    enemy.group.position.z = nextZ;
+                }
+
+                enemy.group.rotation.y = Math.atan2(
+                    difference.x,
+                    difference.z
+                );
+            }
+
+            // Attack player
+
+            if (
+                distance < 1.7 &&
+                enemy.attackCooldown <= 0
+            ) {
+
+                if (playerDamageCooldown <= 0) {
+
+                    playerHealth -= 10;
+
+                    playerDamageCooldown = 0.8;
+
+                    updateHealth();
+
+                    notify("You were hit!");
+                }
+
+                enemy.attackCooldown = 1.2;
+            }
+
+            // Enemy health bar
+
+            enemy.healthBar.position.set(
+                enemy.group.position.x,
+                enemy.group.position.y + 2.7,
+                enemy.group.position.z
+            );
+
+            enemy.healthBar.lookAt(camera.position);
+
+            enemy.healthFill.scale.x = Math.max(
+                0,
+                enemy.health / enemy.maxHealth
+            );
+
+            enemy.healthFill.position.x =
+                -(1 - enemy.health / enemy.maxHealth) * 0.5;
+        }
+    }
+
+    // ==========================================
+    // 26. PLAYER DEATH AND RESPAWN
+    // ==========================================
+
+    function checkPlayerHealth() {
+
+        if (playerHealth > 0) return;
+
+        playerHealth = 100;
+
+        player.position.set(0, 0, 17);
+
+        velocityY = 0;
+        grounded = true;
+
+        updateHealth();
+
+        notify("Respawned!");
+    }
+
+    // ==========================================
+    // 27. ANIMATION
     // ==========================================
 
     let animationId;
@@ -504,25 +1343,48 @@ export function startSpaceGame(container) {
         const time = clock.elapsedTime;
 
         // --------------------------------------
+        // COOLDOWNS
+        // --------------------------------------
+
+        weaponCooldown = Math.max(0, weaponCooldown - dt);
+        punchCooldown = Math.max(0, punchCooldown - dt);
+        burstCooldown = Math.max(0, burstCooldown - dt);
+        dashCooldown = Math.max(0, dashCooldown - dt);
+        playerDamageCooldown = Math.max(
+            0,
+            playerDamageCooldown - dt
+        );
+
+        notificationTimer -= dt;
+
+        if (notificationTimer <= 0) {
+            notification.textContent = "";
+        }
+
+        // --------------------------------------
         // ARROW KEY CAMERA CONTROLS
         // --------------------------------------
 
         const cameraSpeed = 1.8;
 
+        // Left/right now rotate vertically.
+
         if (keys.ArrowLeft) {
-            yaw -= cameraSpeed * dt;
-        }
-
-        if (keys.ArrowRight) {
-            yaw += cameraSpeed * dt;
-        }
-
-        if (keys.ArrowUp) {
             pitch += cameraSpeed * dt;
         }
 
-        if (keys.ArrowDown) {
+        if (keys.ArrowRight) {
             pitch -= cameraSpeed * dt;
+        }
+
+        // Up/down now rotate horizontally.
+
+        if (keys.ArrowUp) {
+            yaw -= cameraSpeed * dt;
+        }
+
+        if (keys.ArrowDown) {
+            yaw += cameraSpeed * dt;
         }
 
         pitch = THREE.MathUtils.clamp(
@@ -553,8 +1415,6 @@ export function startSpaceGame(container) {
         const speed =
             keys.ShiftLeft || keys.ShiftRight ? 13 : 8;
 
-        // Camera-relative movement
-
         const forwardX = -Math.sin(yaw);
         const forwardZ = -Math.cos(yaw);
 
@@ -573,9 +1433,6 @@ export function startSpaceGame(container) {
         // HORIZONTAL COLLISION
         // --------------------------------------
 
-        // Move along X first.
-        // If blocked, the player can still slide along the wall.
-
         const nextX = player.position.x + velocity.x * dt;
 
         if (!collidesAt(
@@ -585,8 +1442,6 @@ export function startSpaceGame(container) {
         )) {
             player.position.x = nextX;
         }
-
-        // Then move along Z.
 
         const nextZ = player.position.z + velocity.z * dt;
 
@@ -619,6 +1474,7 @@ export function startSpaceGame(container) {
         // --------------------------------------
 
         if (jumpQueued && grounded) {
+
             velocityY = 10;
             grounded = false;
         }
@@ -694,15 +1550,68 @@ export function startSpaceGame(container) {
         rightArm.rotation.x = swing;
 
         // --------------------------------------
-        // FACE MOVEMENT DIRECTION
+        // FACE MOUSE AIM
         // --------------------------------------
 
-        if (moving) {
-            player.rotation.y = Math.atan2(
-                velocity.x,
-                velocity.z
-            );
+        const aimDirection = getAimDirection();
+
+        player.rotation.y = Math.atan2(
+            aimDirection.x,
+            aimDirection.z
+        );
+
+        // --------------------------------------
+        // PUNCH ANIMATION
+        // --------------------------------------
+
+        if (punchAnimation > 0) {
+
+            punchAnimation -= dt;
+
+            rightArm.rotation.x = -2;
         }
+
+        // --------------------------------------
+        // PLAYER ACTIONS
+        // --------------------------------------
+
+        if (shootQueued) {
+            fireWeapon();
+            shootQueued = false;
+        }
+
+        if (punchQueued) {
+            punch();
+            punchQueued = false;
+        }
+
+        if (burstQueued) {
+            energyBurst();
+            burstQueued = false;
+        }
+
+        if (dashQueued) {
+            dash();
+            dashQueued = false;
+        }
+
+        // --------------------------------------
+        // PROJECTILES
+        // --------------------------------------
+
+        updateProjectiles(dt);
+
+        // --------------------------------------
+        // ENEMY AI
+        // --------------------------------------
+
+        updateEnemies(dt);
+
+        // --------------------------------------
+        // PLAYER HEALTH
+        // --------------------------------------
+
+        checkPlayerHealth();
 
         // --------------------------------------
         // COLLECT CREDITS
@@ -723,20 +1632,16 @@ export function startSpaceGame(container) {
                 scene.remove(coin);
                 credits.splice(i, 1);
 
-                money += 100;
-                collected++;
+                addMoney(100);
 
-                moneyDisplay.textContent = `Credits: ${money}`;
+                collected++;
 
                 questDisplay.textContent = collected >= 5
                     ? "Quest completed! +500 credits"
                     : `Quest: Collect 5 energy credits (${collected}/5)`;
 
                 if (collected === 5) {
-
-                    money += 500;
-
-                    moneyDisplay.textContent = `Credits: ${money}`;
+                    addMoney(500);
                 }
             }
         }
@@ -780,7 +1685,7 @@ export function startSpaceGame(container) {
     }
 
     // ==========================================
-    // 17. RESIZE
+    // 28. RESIZE
     // ==========================================
 
     const resizeObserver = new ResizeObserver(() => {
@@ -801,7 +1706,7 @@ export function startSpaceGame(container) {
     animate();
 
     // ==========================================
-    // 18. CLEANUP WHEN LEAVING THE GAME
+    // 29. CLEANUP
     // ==========================================
 
     return function stopSpaceGame() {
