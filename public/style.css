@@ -1,1 +1,38 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
+body {
+    overflow: hidden;
+    background: #030510;
+    color: white;
+    font-family: Arial, sans-serif;
+}
+
+canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+}
+
+#overlay {
+    position: fixed;
+    top: 35px;
+    left: 40px;
+    z-index: 1;
+    pointer-events: none;
+}
+
+h1 {
+    font-size: 36px;
+    letter-spacing: 6px;
+    color: #8be9ff;
+    text-shadow: 0 0 20px #00aaff;
+}
+
+p {
+    margin-top: 12px;
+    color: #aabbd0;
+}
