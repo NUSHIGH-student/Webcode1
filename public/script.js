@@ -171,8 +171,8 @@ function animate() {
             Math.sin(time * 0.5 + data.phase) * 0.06;
 
         // React to mouse
-        button.position.x += mouse.x * 0.15;
-        button.position.y += mouse.y * 0.15;
+        button.position.x += mouse.x * 1.5;
+        button.position.y += mouse.y * 1.5;
     });
 
     // Camera follows mouse slightly
