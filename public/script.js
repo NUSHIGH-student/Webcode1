@@ -63,7 +63,7 @@ scene.add(stars);
 
 
 // ==========================================
-// 3. DYNAMIC STARS THAT SPAWN AND DIE
+// 3. DYNAMIC STARS
 // ==========================================
 
 const dynamicStars = [];
@@ -130,8 +130,6 @@ function createGalaxyTexture() {
 
     const ctx = canvas.getContext("2d");
 
-    // Glowing centre
-
     const gradient = ctx.createRadialGradient(
         256, 256, 5,
         256, 256, 220
@@ -159,8 +157,6 @@ function createGalaxyTexture() {
 
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 512, 512);
-
-    // Spiral arms
 
     ctx.translate(256, 256);
 
@@ -339,10 +335,10 @@ function createButton(label, x, y, z) {
     buttons.push(button);
 }
 
-createButton("HOME", -4, 2, 0);
-createButton("PROJECTS", 4, 2, -2);
-createButton("ABOUT", -4, -2, -1);
-createButton("CONTACT", 4, -2, 1);
+createButton("NEW GAME", -4, 2, 0);
+createButton("ACHIEVEMENTS", 4, 2, -2);
+createButton("LOG IN", -4, -2, -1);
+createButton("LEADERBOARD", 4, -2, 1);
 
 
 // ==========================================
@@ -361,12 +357,197 @@ window.addEventListener("pointermove", (event) => {
 
 
 // ==========================================
-// 8. BUTTON CLICK DETECTION
+// 8. SECTION SCREENS AND FLASH TRANSITION
+// ==========================================
+
+// Flash overlay
+
+const flashOverlay = document.createElement("div");
+
+flashOverlay.style.position = "fixed";
+flashOverlay.style.inset = "0";
+flashOverlay.style.background = "white";
+flashOverlay.style.opacity = "0";
+flashOverlay.style.pointerEvents = "none";
+flashOverlay.style.zIndex = "10000";
+flashOverlay.style.transition = "opacity 0.13s ease";
+
+document.body.appendChild(flashOverlay);
+
+
+// Section screen
+
+const segmentScreen = document.createElement("div");
+
+segmentScreen.style.position = "fixed";
+segmentScreen.style.inset = "0";
+segmentScreen.style.display = "none";
+segmentScreen.style.flexDirection = "column";
+segmentScreen.style.alignItems = "center";
+segmentScreen.style.justifyContent = "center";
+
+segmentScreen.style.background =
+    "radial-gradient(circle at center, #101c45, #030510 75%)";
+
+segmentScreen.style.color = "white";
+segmentScreen.style.fontFamily = "Arial, sans-serif";
+segmentScreen.style.zIndex = "9999";
+segmentScreen.style.textAlign = "center";
+segmentScreen.style.padding = "30px";
+
+document.body.appendChild(segmentScreen);
+
+
+// Section content
+
+const sectionContent = {
+
+    "NEW GAME": {
+        title: "NEW GAME",
+        description: "Your journey begins here."
+    },
+
+    "ACHIEVEMENTS": {
+        title: "ACHIEVEMENTS",
+        description: "Discover the milestones you have accomplished."
+    },
+
+    "LOG IN": {
+        title: "LOG IN",
+        description: "Sign-in functionality will be added here."
+    },
+
+    "LEADERBOARD": {
+        title: "LEADERBOARD",
+        description: "See how you rank against other players."
+    }
+
+};
+
+
+// Section title
+
+const sectionTitle = document.createElement("h1");
+
+sectionTitle.style.fontSize = "48px";
+sectionTitle.style.letterSpacing = "6px";
+sectionTitle.style.color = "#8be9ff";
+sectionTitle.style.textShadow = "0 0 25px #00aaff";
+
+
+// Section description
+
+const sectionDescription = document.createElement("p");
+
+sectionDescription.style.fontSize = "18px";
+sectionDescription.style.color = "#aabbd0";
+sectionDescription.style.marginTop = "20px";
+
+
+// Back button
+
+const backButton = document.createElement("button");
+
+backButton.textContent = "← BACK TO SPACE";
+
+backButton.style.marginTop = "45px";
+backButton.style.padding = "15px 30px";
+backButton.style.border = "2px solid #8be9ff";
+backButton.style.borderRadius = "12px";
+backButton.style.background = "rgba(10, 25, 55, 0.8)";
+backButton.style.color = "white";
+backButton.style.fontSize = "16px";
+backButton.style.letterSpacing = "2px";
+backButton.style.cursor = "pointer";
+backButton.style.boxShadow = "0 0 20px #0077ff";
+
+segmentScreen.appendChild(sectionTitle);
+segmentScreen.appendChild(sectionDescription);
+segmentScreen.appendChild(backButton);
+
+
+// ==========================================
+// 9. FLASH TRANSITION FUNCTION
+// ==========================================
+
+let transitioning = false;
+
+function flashTransition(callback) {
+
+    if (transitioning) return;
+
+    transitioning = true;
+
+    flashOverlay.style.opacity = "1";
+
+    setTimeout(() => {
+
+        callback();
+
+        flashOverlay.style.opacity = "0";
+
+        setTimeout(() => {
+
+            transitioning = false;
+
+        }, 200);
+
+    }, 130);
+
+}
+
+
+// ==========================================
+// 10. OPEN A SECTION
+// ==========================================
+
+function openSegment(label) {
+
+    const section = sectionContent[label];
+
+    if (!section) return;
+
+    flashTransition(() => {
+
+        sectionTitle.textContent = section.title;
+
+        sectionDescription.textContent = section.description;
+
+        segmentScreen.style.display = "flex";
+
+    });
+
+}
+
+
+// ==========================================
+// 11. RETURN TO SPACE
+// ==========================================
+
+backButton.addEventListener("click", (event) => {
+
+    event.stopPropagation();
+
+    flashTransition(() => {
+
+        segmentScreen.style.display = "none";
+
+    });
+
+});
+
+
+// ==========================================
+// 12. BUTTON CLICK DETECTION
 // ==========================================
 
 const raycaster = new THREE.Raycaster();
 
 window.addEventListener("click", () => {
+
+    if (transitioning) return;
+
+    if (segmentScreen.style.display === "flex") return;
 
     raycaster.setFromCamera(mouse, camera);
 
@@ -376,8 +557,7 @@ window.addEventListener("click", () => {
 
         const selectedButton = intersections[0].object;
 
-        document.getElementById("message").textContent =
-            "You selected: " + selectedButton.userData.label;
+        openSegment(selectedButton.userData.label);
 
     }
 
@@ -385,7 +565,7 @@ window.addEventListener("click", () => {
 
 
 // ==========================================
-// 9. ANIMATION LOOP
+// 13. ANIMATION LOOP
 // ==========================================
 
 function animate() {
@@ -408,15 +588,9 @@ function animate() {
         const progress =
             star.userData.age / star.userData.lifetime;
 
-        // Fade in and fade out
-
         star.material.opacity = Math.sin(progress * Math.PI);
 
-        // Move towards camera
-
         star.position.z += star.userData.speed * dt;
-
-        // Respawn when lifetime ends
 
         if (star.userData.age >= star.userData.lifetime) {
 
@@ -438,23 +612,15 @@ function animate() {
         const progress =
             galaxy.userData.age / galaxy.userData.lifetime;
 
-        // Fade in and fade out
-
         galaxy.material.opacity =
             0.3 * Math.sin(progress * Math.PI);
-
-        // Drift through space
 
         galaxy.position.z += galaxy.userData.speed * dt;
 
         galaxy.position.x +=
             Math.sin(time * 0.15) * 0.002;
 
-        // Rotate
-
         galaxy.material.rotation += dt * 0.025;
-
-        // Respawn
 
         if (galaxy.userData.age >= galaxy.userData.lifetime) {
 
@@ -489,8 +655,6 @@ function animate() {
         let forceX = 0;
         let forceY = 0;
 
-        // Mouse repulsion
-
         if (
             distance < interactionRadius &&
             distance > 0.001
@@ -504,32 +668,20 @@ function animate() {
 
         }
 
-        // Spring force
-
         const springX = -stiffness * data.offsetX;
         const springY = -stiffness * data.offsetY;
-
-        // Damping force
 
         const dampingX = -damping * data.vx;
         const dampingY = -damping * data.vy;
 
-        // Total acceleration
-
         const ax = springX + dampingX + forceX;
         const ay = springY + dampingY + forceY;
-
-        // Update velocity
 
         data.vx += ax * dt;
         data.vy += ay * dt;
 
-        // Update displacement
-
         data.offsetX += data.vx * dt;
         data.offsetY += data.vy * dt;
-
-        // Natural floating movement
 
         const floatY =
             Math.sin(time * data.speed + data.phase) * 0.25;
@@ -542,8 +694,6 @@ function animate() {
 
         button.position.y =
             data.baseY + floatY + data.offsetY;
-
-        // Rotation from movement
 
         button.rotation.z = -data.vx * 0.08;
         button.rotation.y = -data.offsetX * 0.12;
@@ -583,7 +733,7 @@ animate();
 
 
 // ==========================================
-// 10. WINDOW RESIZE
+// 14. WINDOW RESIZE
 // ==========================================
 
 window.addEventListener("resize", () => {
