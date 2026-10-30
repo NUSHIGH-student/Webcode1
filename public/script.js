@@ -176,8 +176,8 @@ function animate() {
     });
 
     // Camera follows mouse slightly
-    camera.position.x += (mouse.x * 0.6 - camera.position.x) * 0.025;
-    camera.position.y += (mouse.y * 0.4 - camera.position.y) * 0.025;
+    camera.position.x += (mouse.x * 0.6 - camera.position.x) * 0.05;
+    camera.position.y += (mouse.y * 0.4 - camera.position.y) * 0.05;
 
     camera.lookAt(0, 0, 0);
 
@@ -185,6 +185,8 @@ function animate() {
     stars.rotation.y = time * 0.015;
 
     renderer.render(scene, camera);
+    button.rotation.y = -mouse.x * 0.3;
+    button.rotation.x = mouse.y * 0.2;
 }
 
 animate();
