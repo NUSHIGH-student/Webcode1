@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import { startSpaceGame } from "./game.js";
 
 // ==========================================
 // 1. SCENE, CAMERA AND RENDERER
@@ -69,7 +68,6 @@ scene.add(stars);
 const dynamicStars = [];
 
 function spawnStar(star, initial = false) {
-
     star.position.set(
         (Math.random() - 0.5) * 35,
         (Math.random() - 0.5) * 22,
@@ -86,7 +84,6 @@ function spawnStar(star, initial = false) {
 }
 
 for (let i = 0; i < 150; i++) {
-
     const material = new THREE.MeshBasicMaterial({
         color: 0xffffff,
         transparent: true,
@@ -112,7 +109,6 @@ for (let i = 0; i < 150; i++) {
     };
 
     spawnStar(star, true);
-
     dynamicStars.push(star);
 }
 
@@ -122,7 +118,6 @@ for (let i = 0; i < 150; i++) {
 // ==========================================
 
 function createGalaxyTexture() {
-
     const canvas = document.createElement("canvas");
 
     canvas.width = 512;
@@ -135,25 +130,10 @@ function createGalaxyTexture() {
         256, 256, 220
     );
 
-    gradient.addColorStop(
-        0,
-        "rgba(255,255,255,0.95)"
-    );
-
-    gradient.addColorStop(
-        0.12,
-        "rgba(150,180,255,0.65)"
-    );
-
-    gradient.addColorStop(
-        0.35,
-        "rgba(100,80,255,0.25)"
-    );
-
-    gradient.addColorStop(
-        1,
-        "rgba(20,10,80,0)"
-    );
+    gradient.addColorStop(0, "rgba(255,255,255,0.95)");
+    gradient.addColorStop(0.12, "rgba(150,180,255,0.65)");
+    gradient.addColorStop(0.35, "rgba(100,80,255,0.25)");
+    gradient.addColorStop(1, "rgba(20,10,80,0)");
 
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 512, 512);
@@ -161,13 +141,11 @@ function createGalaxyTexture() {
     ctx.translate(256, 256);
 
     for (let arm = 0; arm < 3; arm++) {
-
         ctx.save();
 
         ctx.rotate((Math.PI * 2 / 3) * arm);
 
         ctx.beginPath();
-
         ctx.moveTo(0, 0);
 
         ctx.bezierCurveTo(
@@ -182,7 +160,6 @@ function createGalaxyTexture() {
         ctx.shadowColor = "#7777ff";
 
         ctx.stroke();
-
         ctx.restore();
     }
 
@@ -195,11 +172,9 @@ function createGalaxyTexture() {
 // ==========================================
 
 const galaxyTexture = createGalaxyTexture();
-
 const galaxies = [];
 
 function spawnGalaxy(galaxy, initial = false) {
-
     galaxy.position.set(
         (Math.random() - 0.5) * 35,
         (Math.random() - 0.5) * 20,
@@ -213,12 +188,10 @@ function spawnGalaxy(galaxy, initial = false) {
         : 0;
 
     galaxy.userData.speed = 0.1 + Math.random() * 0.2;
-
     galaxy.material.opacity = 0;
 }
 
 for (let i = 0; i < 5; i++) {
-
     const material = new THREE.SpriteMaterial({
         map: galaxyTexture,
         transparent: true,
@@ -244,7 +217,6 @@ for (let i = 0; i < 5; i++) {
     };
 
     spawnGalaxy(galaxy, true);
-
     galaxies.push(galaxy);
 }
 
@@ -256,7 +228,6 @@ for (let i = 0; i < 5; i++) {
 const buttons = [];
 
 function createButton(label, x, y, z) {
-
     const canvas = document.createElement("canvas");
 
     canvas.width = 512;
@@ -296,30 +267,24 @@ function createButton(label, x, y, z) {
     });
 
     const geometry = new THREE.PlaneGeometry(3.6, 1.27);
-
     const button = new THREE.Mesh(geometry, material);
 
     button.position.set(x, y, z);
 
     button.userData = {
         label: label,
-
         baseX: x,
         baseY: y,
         baseZ: z,
-
         speed: 0.5 + Math.random() * 0.5,
         phase: Math.random() * Math.PI * 2,
-
         vx: 0,
         vy: 0,
-
         offsetX: 0,
         offsetY: 0
     };
 
     scene.add(button);
-
     buttons.push(button);
 }
 
@@ -336,19 +301,14 @@ createButton("LEADERBOARD", 4, -2, 1);
 const mouse = new THREE.Vector2();
 
 window.addEventListener("pointermove", (event) => {
-
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
 });
 
 
 // ==========================================
 // 8. SECTION SCREENS AND FLASH TRANSITION
 // ==========================================
-
-// Flash overlay
 
 const flashOverlay = document.createElement("div");
 
@@ -362,9 +322,6 @@ flashOverlay.style.transition = "opacity 0.13s ease";
 
 document.body.appendChild(flashOverlay);
 
-
-// Section screen
-
 const segmentScreen = document.createElement("div");
 
 segmentScreen.style.position = "fixed";
@@ -373,10 +330,8 @@ segmentScreen.style.display = "none";
 segmentScreen.style.flexDirection = "column";
 segmentScreen.style.alignItems = "center";
 segmentScreen.style.justifyContent = "center";
-
 segmentScreen.style.background =
     "radial-gradient(circle at center, #101c45, #030510 75%)";
-
 segmentScreen.style.color = "white";
 segmentScreen.style.fontFamily = "Arial, sans-serif";
 segmentScreen.style.zIndex = "9999";
@@ -384,9 +339,6 @@ segmentScreen.style.textAlign = "center";
 segmentScreen.style.padding = "30px";
 
 document.body.appendChild(segmentScreen);
-
-
-// GAME CONTAINER
 
 const gameContainer = document.createElement("div");
 
@@ -408,7 +360,6 @@ let stopGame = null;
 // ==========================================
 
 const sectionContent = {
-
     "NEW GAME": {
         title: "NEW GAME",
         description: "Your journey begins here."
@@ -428,11 +379,7 @@ const sectionContent = {
         title: "LEADERBOARD",
         description: "See how you rank against other players."
     }
-
 };
-
-
-// Section title
 
 const sectionTitle = document.createElement("h1");
 
@@ -441,22 +388,15 @@ sectionTitle.style.letterSpacing = "6px";
 sectionTitle.style.color = "#8be9ff";
 sectionTitle.style.textShadow = "0 0 25px #00aaff";
 
-
-// Section description
-
 const sectionDescription = document.createElement("p");
 
 sectionDescription.style.fontSize = "18px";
 sectionDescription.style.color = "#aabbd0";
 sectionDescription.style.marginTop = "20px";
 
-
-// Back button
-
 const backButton = document.createElement("button");
 
 backButton.textContent = "← BACK TO SPACE";
-
 backButton.style.marginTop = "45px";
 backButton.style.padding = "15px 30px";
 backButton.style.border = "2px solid #8be9ff";
@@ -480,27 +420,19 @@ segmentScreen.appendChild(backButton);
 let transitioning = false;
 
 function flashTransition(callback) {
-
     if (transitioning) return;
 
     transitioning = true;
-
     flashOverlay.style.opacity = "1";
 
     setTimeout(() => {
-
         callback();
-
         flashOverlay.style.opacity = "0";
 
         setTimeout(() => {
-
             transitioning = false;
-
         }, 200);
-
     }, 130);
-
 }
 
 
@@ -508,6 +440,7 @@ function flashTransition(callback) {
 // 11. OPEN A SECTION
 // ==========================================
 
+function openSegment(label) {
     if (label === "NEW GAME") {
         window.location.href = "./territory.html";
         return;
@@ -518,51 +451,20 @@ function flashTransition(callback) {
     if (!section) return;
 
     flashTransition(() => {
-
         sectionTitle.textContent = section.title;
         sectionDescription.textContent = section.description;
 
-        if (label === "NEW GAME") {
-
-            sectionTitle.style.display = "none";
-            sectionDescription.style.display = "none";
-
-            gameContainer.style.display = "block";
-
-            backButton.style.position = "absolute";
-            backButton.style.top = "20px";
-            backButton.style.right = "20px";
-            backButton.style.zIndex = "10";
-            backButton.style.marginTop = "0";
-
-        } else {
-
-            if (stopGame) {
-                stopGame();
-                stopGame = null;
-            }
-
-            gameContainer.style.display = "none";
-
-            sectionTitle.style.display = "";
-            sectionDescription.style.display = "";
-
-            backButton.style.position = "";
-            backButton.style.top = "";
-            backButton.style.right = "";
-            backButton.style.zIndex = "";
-            backButton.style.marginTop = "45px";
-
+        if (stopGame) {
+            stopGame();
+            stopGame = null;
         }
+
+        gameContainer.style.display = "none";
+        sectionTitle.style.display = "";
+        sectionDescription.style.display = "";
 
         segmentScreen.style.display = "flex";
-
-        if (label === "NEW GAME" && !stopGame) {
-            stopGame = startSpaceGame(gameContainer);
-        }
-
     });
-
 }
 
 
@@ -571,11 +473,9 @@ function flashTransition(callback) {
 // ==========================================
 
 backButton.addEventListener("click", (event) => {
-
     event.stopPropagation();
 
     flashTransition(() => {
-
         if (stopGame) {
             stopGame();
             stopGame = null;
@@ -593,9 +493,7 @@ backButton.addEventListener("click", (event) => {
         backButton.style.marginTop = "45px";
 
         segmentScreen.style.display = "none";
-
     });
-
 });
 
 
@@ -606,9 +504,7 @@ backButton.addEventListener("click", (event) => {
 const raycaster = new THREE.Raycaster();
 
 window.addEventListener("click", () => {
-
     if (transitioning) return;
-
     if (segmentScreen.style.display === "flex") return;
 
     raycaster.setFromCamera(mouse, camera);
@@ -616,13 +512,9 @@ window.addEventListener("click", () => {
     const intersections = raycaster.intersectObjects(buttons);
 
     if (intersections.length > 0) {
-
         const selectedButton = intersections[0].object;
-
         openSegment(selectedButton.userData.label);
-
     }
-
 });
 
 
@@ -631,40 +523,26 @@ window.addEventListener("click", () => {
 // ==========================================
 
 function animate() {
-
     requestAnimationFrame(animate);
 
     const dt = Math.min(clock.getDelta(), 0.03);
-
     const time = clock.elapsedTime;
 
-
-    // DYNAMIC STAR ANIMATION
-
     dynamicStars.forEach(star => {
-
         star.userData.age += dt;
 
         const progress =
             star.userData.age / star.userData.lifetime;
 
         star.material.opacity = Math.sin(progress * Math.PI);
-
         star.position.z += star.userData.speed * dt;
 
         if (star.userData.age >= star.userData.lifetime) {
-
             spawnStar(star);
-
         }
-
     });
 
-
-    // GALAXY ANIMATION
-
     galaxies.forEach(galaxy => {
-
         galaxy.userData.age += dt;
 
         const progress =
@@ -681,15 +559,9 @@ function animate() {
         galaxy.material.rotation += dt * 0.025;
 
         if (galaxy.userData.age >= galaxy.userData.lifetime) {
-
             spawnGalaxy(galaxy);
-
         }
-
     });
-
-
-    // SPRING PHYSICS FOR BUTTONS
 
     const stiffness = 8;
     const damping = 3;
@@ -697,7 +569,6 @@ function animate() {
     const interactionRadius = 4;
 
     buttons.forEach(button => {
-
         const data = button.userData;
 
         const mouseX = mouse.x * 6;
@@ -711,17 +582,12 @@ function animate() {
         let forceX = 0;
         let forceY = 0;
 
-        if (
-            distance < interactionRadius &&
-            distance > 0.001
-        ) {
-
+        if (distance < interactionRadius && distance > 0.001) {
             const strength =
                 (interactionRadius - distance) * mouseForce;
 
             forceX = (dx / distance) * strength;
             forceY = (dy / distance) * strength;
-
         }
 
         const springX = -stiffness * data.offsetX;
@@ -754,11 +620,7 @@ function animate() {
         button.rotation.z = -data.vx * 0.08;
         button.rotation.y = -data.offsetX * 0.12;
         button.rotation.x = data.offsetY * 0.1;
-
     });
-
-
-    // CAMERA PARALLAX
 
     camera.position.x +=
         (mouse.x * 0.5 - camera.position.x) * 0.03;
@@ -766,17 +628,10 @@ function animate() {
     camera.position.y +=
         (mouse.y * 0.5 - camera.position.y) * 0.03;
 
-
-    // ORIGINAL STARFIELD ROTATION
-
     stars.rotation.y += 0.0002;
     stars.rotation.x += 0.0001;
 
-
-    // RENDER
-
     renderer.render(scene, camera);
-
 }
 
 animate();
@@ -787,7 +642,6 @@ animate();
 // ==========================================
 
 window.addEventListener("resize", () => {
-
     camera.aspect =
         window.innerWidth / window.innerHeight;
 
@@ -801,5 +655,4 @@ window.addEventListener("resize", () => {
     renderer.setPixelRatio(
         Math.min(window.devicePixelRatio, 2)
     );
-
 });
