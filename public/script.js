@@ -508,7 +508,10 @@ function flashTransition(callback) {
 // 11. OPEN A SECTION
 // ==========================================
 
-function openSegment(label) {
+    if (label === "NEW GAME") {
+        window.location.href = "./territory.html";
+        return;
+    }
 
     const section = sectionContent[label];
 
